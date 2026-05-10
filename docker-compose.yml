@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: lottery-postgres
+    environment:
+      POSTGRES_DB: ${DB_NAME:-lottery_db}
+      POSTGRES_USER: ${DB_USER:-lottery_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-lottery_pass}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./src/main/resources/db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+      - ./src/main/resources/db/data.sql:/docker-entrypoint-initdb.d/02-data.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-lottery_user} -d ${DB_NAME:-lottery_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - lottery-network
+
+  adminer:
+    image: adminer:latest
+    container_name: lottery-adminer
+    ports:
+      - "8081:8080"
+    environment:
+      ADMINER_DEFAULT_SERVER: postgres
+    networks:
+      - lottery-network
+    depends_on:
+      - postgres
+
+networks:
+  lottery-network:
+    driver: bridge
+
+volumes:
+  postgres_data:

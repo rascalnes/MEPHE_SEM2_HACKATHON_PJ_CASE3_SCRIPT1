@@ -41,3 +41,34 @@ bin/
 
 ### Mac OS ###
 .DS_Store
+
+# Compiled files
+*.class
+target/
+
+# IDE files
+.idea/
+.settings/
+
+# Logs
+*.log
+logs/
+
+# Environment variables
+.env
+.env.local
+
+# OS files
+Thumbs.db
+
+# Database
+*.db
+*.sqlite
+
+# Gradle
+.gradle/
+gradle-app.setting
+!gradle-wrapper.jar
+
+# Docker
+docker-compose.override.yml
