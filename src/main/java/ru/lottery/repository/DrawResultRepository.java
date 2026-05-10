@@ -1,28 +1,53 @@
 package ru.lottery.repository;
 
 import ru.lottery.model.DrawResult;
-import java.util.*;
+import ru.lottery.config.DatabaseConnection;
+
+import java.sql.*;
 
 public class DrawResultRepository {
-    private final Map<Long, DrawResult> storage = new HashMap<>();
 
-    // Сохранить результат тиража
     public void save(DrawResult result) {
-        storage.put(result.getDrawId(), result);
+        String sql = "INSERT INTO draw_results (draw_id, winning_numbers) VALUES (?, ?) ON CONFLICT (draw_id) DO UPDATE SET winning_numbers = ?";
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setLong(1, result.getDrawId());
+            pstmt.setString(2, result.getWinningNumbers());
+            pstmt.setString(3, result.getWinningNumbers());
+            pstmt.executeUpdate();
+
+            System.out.println("✅ Результат тиража #" + result.getDrawId() + " сохранён в БД");
+
+        } catch (SQLException e) {
+            System.err.println("❌ Ошибка сохранения результата: " + e.getMessage());
+        }
     }
 
-    // Найти по ID тиража
     public DrawResult findByDrawId(Long drawId) {
-        return storage.get(drawId);
+        String sql = "SELECT * FROM draw_results WHERE draw_id = ?";
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setLong(1, drawId);
+            ResultSet rs = pstmt.executeQuery();
+
+            if (rs.next()) {
+                DrawResult result = new DrawResult();
+                result.setDrawId(rs.getLong("draw_id"));
+                result.setWinningNumbers(rs.getString("winning_numbers"));
+                return result;
+            }
+
+        } catch (SQLException e) {
+            System.err.println("❌ Ошибка поиска результата: " + e.getMessage());
+        }
+        return null;
     }
 
-    // Обновить результат
     public void update(DrawResult result) {
-        storage.put(result.getDrawId(), result);
-    }
-
-    // Найти все результаты
-    public List<DrawResult> findAll() {
-        return new ArrayList<>(storage.values());
+        save(result);
     }
 }

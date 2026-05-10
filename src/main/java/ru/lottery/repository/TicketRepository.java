@@ -1,57 +1,128 @@
 package ru.lottery.repository;
 
 import ru.lottery.model.Ticket;
-import java.util.*;
-import java.util.concurrent.atomic.AtomicLong;
+import ru.lottery.config.DatabaseConnection;
+
+import java.sql.*;
+import java.util.ArrayList;
+import java.util.List;
 
 public class TicketRepository {
-    // Временное хранилище (потом заменим на реальную БД)
-    private final Map<Long, Ticket> storage = new HashMap<>();
-    private final AtomicLong idGenerator = new AtomicLong(1);
 
-    // Сохранить билет
     public Ticket save(Ticket ticket) {
-        if (ticket.getId() == null) {
-            ticket.setId(idGenerator.getAndIncrement());
+        String sql = "INSERT INTO tickets (draw_id, user_id, numbers, status) VALUES (?, ?, ?, ?) RETURNING id";
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setLong(1, ticket.getDrawId());
+            pstmt.setLong(2, ticket.getUserId());
+            pstmt.setString(3, ticket.getNumbers());
+            pstmt.setString(4, ticket.getStatus() != null ? ticket.getStatus() : "PENDING");
+
+            ResultSet rs = pstmt.executeQuery();
+            if (rs.next()) {
+                ticket.setId(rs.getLong(1));
+            }
+
+            System.out.println("✅ Билет сохранён в БД. ID: " + ticket.getId());
+            return ticket;
+
+        } catch (SQLException e) {
+            System.err.println("❌ Ошибка сохранения билета: " + e.getMessage());
+            return null;
         }
-        storage.put(ticket.getId(), ticket);
-        return ticket;
     }
 
-    // Найти по ID
     public Ticket findById(Long id) {
-        return storage.get(id);
+        String sql = "SELECT * FROM tickets WHERE id = ?";
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setLong(1, id);
+            ResultSet rs = pstmt.executeQuery();
+
+            if (rs.next()) {
+                Ticket ticket = new Ticket();
+                ticket.setId(rs.getLong("id"));
+                ticket.setDrawId(rs.getLong("draw_id"));
+                ticket.setUserId(rs.getLong("user_id"));
+                ticket.setNumbers(rs.getString("numbers"));
+                ticket.setStatus(rs.getString("status"));
+                return ticket;
+            }
+
+        } catch (SQLException e) {
+            System.err.println("❌ Ошибка поиска билета: " + e.getMessage());
+        }
+        return null;
     }
 
-    // Найти все билеты тиража
     public List<Ticket> findByDrawId(Long drawId) {
-        List<Ticket> result = new ArrayList<>();
-        for (Ticket ticket : storage.values()) {
-            if (ticket.getDrawId().equals(drawId)) {
-                result.add(ticket);
+        List<Ticket> tickets = new ArrayList<>();
+        String sql = "SELECT * FROM tickets WHERE draw_id = ?";
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setLong(1, drawId);
+            ResultSet rs = pstmt.executeQuery();
+
+            while (rs.next()) {
+                Ticket ticket = new Ticket();
+                ticket.setId(rs.getLong("id"));
+                ticket.setDrawId(rs.getLong("draw_id"));
+                ticket.setUserId(rs.getLong("user_id"));
+                ticket.setNumbers(rs.getString("numbers"));
+                ticket.setStatus(rs.getString("status"));
+                tickets.add(ticket);
             }
+
+        } catch (SQLException e) {
+            System.err.println("❌ Ошибка поиска билетов по тиражу: " + e.getMessage());
         }
-        return result;
+        return tickets;
     }
 
-    // Обновить билет
     public void update(Ticket ticket) {
-        storage.put(ticket.getId(), ticket);
-    }
+        String sql = "UPDATE tickets SET status = ? WHERE id = ?";
 
-    // Найти все билеты пользователя
-    public List<Ticket> findByUserId(Long userId) {
-        List<Ticket> result = new ArrayList<>();
-        for (Ticket ticket : storage.values()) {
-            if (ticket.getUserId().equals(userId)) {
-                result.add(ticket);
-            }
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setString(1, ticket.getStatus());
+            pstmt.setLong(2, ticket.getId());
+            pstmt.executeUpdate();
+
+            System.out.println("✅ Билет #" + ticket.getId() + " обновлён. Статус: " + ticket.getStatus());
+
+        } catch (SQLException e) {
+            System.err.println("❌ Ошибка обновления билета: " + e.getMessage());
         }
-        return result;
     }
 
-    // Найти все билеты
     public List<Ticket> findAll() {
-        return new ArrayList<>(storage.values());
+        List<Ticket> tickets = new ArrayList<>();
+        String sql = "SELECT * FROM tickets";
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+
+            while (rs.next()) {
+                Ticket ticket = new Ticket();
+                ticket.setId(rs.getLong("id"));
+                ticket.setDrawId(rs.getLong("draw_id"));
+                ticket.setUserId(rs.getLong("user_id"));
+                ticket.setNumbers(rs.getString("numbers"));
+                ticket.setStatus(rs.getString("status"));
+                tickets.add(ticket);
+            }
+
+        } catch (SQLException e) {
+            System.err.println("❌ Ошибка получения всех билетов: " + e.getMessage());
+        }
+        return tickets;
     }
 }
