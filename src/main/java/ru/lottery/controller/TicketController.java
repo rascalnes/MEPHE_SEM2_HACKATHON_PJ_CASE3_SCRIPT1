@@ -3,39 +3,44 @@ package ru.lottery.controller;
 import com.google.gson.Gson;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
-import ru.lottery.dto.request.BuyTicketRequest;
 import ru.lottery.dto.response.TicketResponse;
+import ru.lottery.model.Ticket;
+import ru.lottery.service.ResultService;
 import ru.lottery.service.TicketService;
 
 import java.io.*;
-import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 public class TicketController implements HttpHandler {
     private final TicketService ticketService = new TicketService();
+    private final ResultService resultService = new ResultService();
     private final Gson gson = new Gson();
 
     @Override
     public void handle(HttpExchange exchange) throws IOException {
+        String method = exchange.getRequestMethod();
+        String path = exchange.getRequestURI().getPath();
+
+        UUID userId = (UUID) exchange.getAttribute("userId");
+        if (userId == null) {
+            sendError(exchange, 401, "Не авторизован");
+            return;
+        }
+
         try {
-            String method = exchange.getRequestMethod();
-            URI uri = exchange.getRequestURI();
-            String path = uri.getPath();
-
-            UUID userId = (UUID) exchange.getAttribute("userId");
-            if (userId == null) {
-                sendError(exchange, 401, "Не авторизован");
-                return;
+            // GET /tickets/{id}/status — статус конкретного билета
+            if ("GET".equals(method) && path.matches("/tickets/\\d+/status")) {
+                handleGetTicketStatus(exchange, path);
             }
-
-            if ("POST".equals(method) && path.matches("/draws/\\d+/tickets")) {
-                handlePurchase(exchange, path, userId);
-            } else if ("GET".equals(method) && "/tickets".equals(path)) {
+            // GET /tickets — история билетов пользователя
+            else if ("GET".equals(method) && path.equals("/tickets")) {
                 handleGetTickets(exchange, userId);
-            } else {
+            }
+            else {
                 sendError(exchange, 404, "Not Found");
             }
         } catch (Exception e) {
@@ -44,22 +49,24 @@ public class TicketController implements HttpHandler {
         }
     }
 
-    private void handlePurchase(HttpExchange exchange, String path, UUID userId) throws IOException {
-        String[] parts = path.split("/");
-        Long drawId = Long.parseLong(parts[2]);
-        String body = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
-        BuyTicketRequest request = gson.fromJson(body, BuyTicketRequest.class);
-        if (request == null) {
-            request = new BuyTicketRequest();
-        }
+    private void handleGetTicketStatus(HttpExchange exchange, String path) throws IOException {
+        Long ticketId = Long.parseLong(path.split("/")[2]);
         try {
-            TicketResponse response = ticketService.purchaseTicket(drawId, userId, request);
-            sendJson(exchange, 201, gson.toJson(response));
-        } catch (IllegalArgumentException e) {
-            sendError(exchange, 400, e.getMessage());
+            Optional<Ticket> opt = resultService.getTicketById(ticketId);
+            if (opt.isPresent()) {
+                Ticket t = opt.get();
+                TicketResponse resp = new TicketResponse();
+                resp.setId(t.getId());
+                resp.setDrawId(t.getDrawId());
+                resp.setNumbers(t.getNumbers());
+                resp.setStatus(t.getStatus().name());
+                resp.setPurchasedAt(t.getPurchasedAt());
+                sendJson(exchange, 200, gson.toJson(resp));
+            } else {
+                sendError(exchange, 404, "Билет не найден");
+            }
         } catch (SQLException e) {
-            e.printStackTrace();
-            sendError(exchange, 500, "Database error: " + e.getMessage());
+            sendError(exchange, 500, "Database error");
         }
     }
 
@@ -77,9 +84,8 @@ public class TicketController implements HttpHandler {
         try {
             List<TicketResponse> tickets = ticketService.getUserTickets(userId, drawId);
             sendJson(exchange, 200, gson.toJson(tickets));
-        } catch (SQLException e) {
-            e.printStackTrace();
-            sendError(exchange, 500, "Database error: " + e.getMessage());
+        } catch (Exception e) {
+            sendError(exchange, 500, "Ошибка получения билетов");
         }
     }
 

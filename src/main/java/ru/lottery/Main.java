@@ -7,6 +7,7 @@ import org.slf4j.LoggerFactory;
 import ru.lottery.config.AppConfig;
 import ru.lottery.controller.AuthController;
 import ru.lottery.controller.TicketController;
+import ru.lottery.controller.DrawController;
 import ru.lottery.security.AuthenticationFilter;
 
 import java.io.IOException;
@@ -35,7 +36,7 @@ public class Main {
             // Register controllers with authentication filter
             registerContext("/auth", new AuthController(), authFilter);
             registerContext("/tickets", new TicketController(), authFilter);
-            registerContext("/draws", new TicketController(), authFilter); // TicketController handles /draws/.../tickets
+            registerContext("/draws", new DrawController(), authFilter); // TicketController handles /draws/.../tickets
 
             // Health check endpoint (public, no filter needed)
             server.createContext("/health", exchange -> {
