@@ -32,15 +32,11 @@ public class TicketController implements HttpHandler {
         }
 
         try {
-            // GET /tickets/{id}/status — статус конкретного билета
             if ("GET".equals(method) && path.matches("/tickets/\\d+/status")) {
                 handleGetTicketStatus(exchange, path);
-            }
-            // GET /tickets — история билетов пользователя
-            else if ("GET".equals(method) && path.equals("/tickets")) {
+            } else if ("GET".equals(method) && path.equals("/tickets")) {
                 handleGetTickets(exchange, userId);
-            }
-            else {
+            } else {
                 sendError(exchange, 404, "Not Found");
             }
         } catch (Exception e) {
