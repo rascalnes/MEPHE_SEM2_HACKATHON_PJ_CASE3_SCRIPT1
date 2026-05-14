@@ -1,0 +1,56 @@
+controller — сервлеты / обработчики REST
+service — логика лотереи, пользователей, тиражей
+repository — JDBC-запросы
+model — POJO-сущности
+dto — объекты для передачи по REST
+security — аутентификация (например, Basic Auth или сессии)
+util — генераторы комбинаций, валидаторы
+
+
+src/main/java/ru/lottery/
+├── controller/
+│   ├── AuthController.java
+│   ├── DrawController.java
+│   ├── TicketController.java
+│   └── ResultController.java
+├── service/
+│   ├── AuthService.java
+│   ├── DrawService.java
+│   ├── TicketService.java
+│   └── ResultService.java
+├── repository/
+│   ├── UserRepository.java
+│   ├── DrawRepository.java
+│   ├── TicketRepository.java
+│   └── DrawResultRepository.java
+├── model/
+│   ├── User.java
+│   ├── Draw.java
+│   ├── DrawResult.java
+│   ├── Ticket.java
+│   └── enums/
+│       ├── DrawStatus.java
+│       ├── TicketStatus.java
+│       └── UserRole.java
+├── dto/
+│   ├── request/
+│   │   ├── LoginRequest.java
+│   │   ├── CreateDrawRequest.java
+│   │   ├── BuyTicketRequest.java
+│   │   └── RegisterRequest.java
+│   └── response/
+│       ├── AuthResponse.java
+│       ├── DrawResponse.java
+│       ├── TicketResponse.java
+│       └── ResultResponse.java
+├── security/
+│   ├── AuthenticationFilter.java
+│   ├── PasswordEncoder.java
+│   └── SessionManager.java
+├── util/
+│   ├── CombinationGenerator.java
+│   ├── TicketChecker.java
+│   └── ValidationUtils.java
+└── config/
+    ├── DatabaseConnection.java
+    └── AppConfig.java
