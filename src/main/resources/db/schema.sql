@@ -48,6 +48,20 @@ CREATE INDEX idx_tickets_status ON tickets(status);
 CREATE INDEX idx_draw_results_draw_id ON draw_results(draw_id);
 CREATE INDEX idx_users_login ON users(login);
 
+-- Таблицы для блока 4
+CREATE TABLE IF NOT EXISTS tickets (
+    id SERIAL PRIMARY KEY,
+    draw_id BIGINT NOT NULL,
+    user_id BIGINT NOT NULL,
+    numbers VARCHAR(255) NOT NULL,
+    status VARCHAR(20) DEFAULT 'PENDING'
+);
+
+CREATE TABLE IF NOT EXISTS draw_results (
+    draw_id BIGINT PRIMARY KEY,
+    winning_numbers VARCHAR(255) NOT NULL
+);
+
 -- Comments
 COMMENT ON TABLE users IS 'System users (admins and regular users)';
 COMMENT ON TABLE draws IS 'Lottery draws';
