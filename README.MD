@@ -20,19 +20,26 @@
 - Gradle 8.14
 
 ### 1. Клонировать репозиторий
+```
 git clone https://github.com/rascalnes/MEPHE_SEM2_HACKATHON_PJ_CASE3_SCRIPT1_NES.git
-
 cd MEPHE_SEM2_HACKATHON_PJ_CASE3_SCRIPT1_NES
+```
 
 ### 2. Собрать приложение
+```
 ./gradlew clean build
+```
 
 ### 3. Запустить PostgreSQL и Adminer
+```
 docker-compose up -d
+```
 
 ### 4. Запустить приложение
-./gradlew run
 
+```
+./gradlew run
+```
 ### 5. Доступ
 APIs:
     http://localhost:8080
