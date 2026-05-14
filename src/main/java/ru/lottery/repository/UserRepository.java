@@ -35,14 +35,14 @@ public class UserRepository extends BaseRepository<User> {
         }
     }
 
+    @Override
     public User save(User user) throws SQLException {
         String sql = "INSERT INTO users (login, password, role) VALUES (?, ?, ?) RETURNING id, created_at";
-
-        try (PreparedStatement ps = getConnection().prepareStatement(sql)) {
+        try (Connection conn = getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, user.getLogin());
             ps.setString(2, user.getPassword());
             ps.setString(3, user.getRole().getValue());
-
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
                     user.setId(UUID.fromString(rs.getString("id")));
@@ -66,10 +66,13 @@ public class UserRepository extends BaseRepository<User> {
 
     public boolean existsByLogin(String login) throws SQLException {
         String sql = "SELECT COUNT(*) FROM users WHERE login = ?";
-        try (PreparedStatement ps = prepareStatement(sql, login);
-             ResultSet rs = ps.executeQuery()) {
-            if (rs.next()) {
-                return rs.getInt(1) > 0;
+        try (Connection conn = getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, login);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1) > 0;
+                }
             }
         }
         return false;

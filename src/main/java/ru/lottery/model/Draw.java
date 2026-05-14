@@ -1,24 +1,30 @@
 package ru.lottery.model;
 
-import java.time.LocalDateTime;
+import ru.lottery.model.enums.DrawStatus;
+import java.sql.Timestamp;
+import java.util.UUID;
 
 public class Draw {
     private Long id;
-    private String status;
-    private LocalDateTime startTime;
-    private LocalDateTime finishTime;
-
-    public Draw() {}
+    private String name;
+    private DrawStatus status;
+    private UUID createdBy;
+    private Timestamp createdAt;
+    private Timestamp startedAt;
+    private Timestamp finishedAt;
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
-
-    public String getStatus() { return status; }
-    public void setStatus(String status) { this.status = status; }
-
-    public LocalDateTime getStartTime() { return startTime; }
-    public void setStartTime(LocalDateTime startTime) { this.startTime = startTime; }
-
-    public LocalDateTime getFinishTime() { return finishTime; }
-    public void setFinishTime(LocalDateTime finishTime) { this.finishTime = finishTime; }
+    public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
+    public DrawStatus getStatus() { return status; }
+    public void setStatus(DrawStatus status) { this.status = status; }
+    public UUID getCreatedBy() { return createdBy; }
+    public void setCreatedBy(UUID createdBy) { this.createdBy = createdBy; }
+    public Timestamp getCreatedAt() { return createdAt; }
+    public void setCreatedAt(Timestamp createdAt) { this.createdAt = createdAt; }
+    public Timestamp getStartedAt() { return startedAt; }
+    public void setStartedAt(Timestamp startedAt) { this.startedAt = startedAt; }
+    public Timestamp getFinishedAt() { return finishedAt; }
+    public void setFinishedAt(Timestamp finishedAt) { this.finishedAt = finishedAt; }
 }

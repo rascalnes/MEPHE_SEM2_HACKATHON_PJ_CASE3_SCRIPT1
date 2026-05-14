@@ -1,39 +1,40 @@
 package ru.lottery.repository;
 
-import ru.lottery.model.DrawResult;
 import ru.lottery.config.DatabaseConnection;
+import ru.lottery.model.DrawResult;
+
 import java.sql.*;
+import java.util.Optional;
 
 public class DrawResultRepository {
-
-    public void save(DrawResult result) {
-        String sql = "INSERT INTO draw_results (draw_id, winning_numbers) VALUES (?, ?) ON CONFLICT (draw_id) DO UPDATE SET winning_numbers = ?";
+    public DrawResult save(DrawResult result) throws SQLException {
+        String sql = "INSERT INTO draw_results (draw_id, winning_combo, generated_at) VALUES (?, ?, ?) RETURNING id";
         try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setLong(1, result.getDrawId());
-            pstmt.setString(2, result.getWinningNumbers());
-            pstmt.setString(3, result.getWinningNumbers());
-            pstmt.executeUpdate();
-        } catch (SQLException e) {
-            e.printStackTrace();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setLong(1, result.getDrawId());
+            ps.setString(2, result.getWinningCombo());
+            ps.setTimestamp(3, result.getGeneratedAt());
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) result.setId(rs.getLong("id"));
         }
+        return result;
     }
 
-    public DrawResult findByDrawId(Long drawId) {
+    public Optional<DrawResult> findByDrawId(Long drawId) throws SQLException {
         String sql = "SELECT * FROM draw_results WHERE draw_id = ?";
         try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setLong(1, drawId);
-            ResultSet rs = pstmt.executeQuery();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setLong(1, drawId);
+            ResultSet rs = ps.executeQuery();
             if (rs.next()) {
-                DrawResult result = new DrawResult();
-                result.setDrawId(rs.getLong("draw_id"));
-                result.setWinningNumbers(rs.getString("winning_numbers"));
-                return result;
+                DrawResult dr = new DrawResult();
+                dr.setId(rs.getLong("id"));
+                dr.setDrawId(rs.getLong("draw_id"));
+                dr.setWinningCombo(rs.getString("winning_combo"));
+                dr.setGeneratedAt(rs.getTimestamp("generated_at"));
+                return Optional.of(dr);
             }
-        } catch (SQLException e) {
-            e.printStackTrace();
         }
-        return null;
+        return Optional.empty();
     }
 }
