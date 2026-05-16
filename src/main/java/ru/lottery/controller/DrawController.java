@@ -6,6 +6,7 @@ import com.sun.net.httpserver.HttpHandler;
 import ru.lottery.dto.request.CreateDrawRequest;
 import ru.lottery.dto.response.DrawResponse;
 import ru.lottery.service.DrawService;
+import ru.lottery.util.GsonUtil;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
@@ -19,7 +20,7 @@ public class DrawController implements HttpHandler {
 
     public DrawController() {
         this.drawService = new DrawService();
-        this.gson = new Gson();
+        this.gson = GsonUtil.getGson();
     }
 
     @Override
@@ -38,9 +39,12 @@ public class DrawController implements HttpHandler {
                 } else if (path.equals("/draws/active")) {
                     handleGetActiveDraws(exchange);
                 } else if (path.matches("/draws/\\d+")) {
-                    // Extract ID from path /draws/123
                     Long drawId = extractDrawId(path);
-                    handleGetDrawById(exchange, drawId);
+                    if (drawId != null) {
+                        handleGetDrawById(exchange, drawId);
+                    } else {
+                        sendResponse(exchange, 400, "{\"error\":\"Invalid draw ID\"}");
+                    }
                 } else {
                     sendResponse(exchange, 404, "{\"error\":\"Not found\"}");
                 }
@@ -58,14 +62,22 @@ public class DrawController implements HttpHandler {
                         return;
                     }
                     Long drawId = extractDrawId(path);
-                    handleStartDraw(exchange, drawId, userId);
+                    if (drawId != null) {
+                        handleStartDraw(exchange, drawId, userId);
+                    } else {
+                        sendResponse(exchange, 400, "{\"error\":\"Invalid draw ID\"}");
+                    }
                 } else if (path.matches("/draws/\\d+/finish")) {
                     if (!"ADMIN".equals(userRole)) {
                         sendResponse(exchange, 403, "{\"error\":\"Admin access required\"}");
                         return;
                     }
                     Long drawId = extractDrawId(path);
-                    handleFinishDraw(exchange, drawId, userId);
+                    if (drawId != null) {
+                        handleFinishDraw(exchange, drawId, userId);
+                    } else {
+                        sendResponse(exchange, 400, "{\"error\":\"Invalid draw ID\"}");
+                    }
                 } else {
                     sendResponse(exchange, 404, "{\"error\":\"Not found\"}");
                 }

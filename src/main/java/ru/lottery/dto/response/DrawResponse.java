@@ -3,7 +3,10 @@ package ru.lottery.dto.response;
 import ru.lottery.model.Draw;
 import ru.lottery.model.DrawResult;
 
+import java.sql.*;
 import java.time.LocalDateTime;
+
+import static ru.lottery.config.DatabaseConnection.getConnection;
 
 public class DrawResponse {
     private boolean success;
@@ -87,5 +90,42 @@ public class DrawResponse {
 
         public LocalDateTime getFinishedAt() { return finishedAt; }
         public void setFinishedAt(LocalDateTime finishedAt) { this.finishedAt = finishedAt; }
+    }
+
+    public Draw save(Draw draw) throws SQLException {
+        String sql = "INSERT INTO draws (name, status, created_by, started_at, finished_at) " +
+                "VALUES (?, ?, ?, ?, ?) RETURNING id, created_at";
+
+        try (PreparedStatement ps = getConnection().prepareStatement(sql)) {
+            ps.setString(1, draw.getName());
+            ps.setString(2, draw.getStatus().getValue());
+
+            // Fix: Convert UUID to proper format for PostgreSQL
+            if (draw.getCreatedBy() != null) {
+                ps.setObject(3, draw.getCreatedBy(), java.sql.Types.OTHER);
+            } else {
+                ps.setNull(3, java.sql.Types.OTHER);
+            }
+
+            if (draw.getStartedAt() != null) {
+                ps.setTimestamp(4, Timestamp.valueOf(draw.getStartedAt()));
+            } else {
+                ps.setNull(4, Types.TIMESTAMP);
+            }
+
+            if (draw.getFinishedAt() != null) {
+                ps.setTimestamp(5, Timestamp.valueOf(draw.getFinishedAt()));
+            } else {
+                ps.setNull(5, Types.TIMESTAMP);
+            }
+
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    draw.setId(rs.getLong("id"));
+                    draw.setCreatedAt(rs.getTimestamp("created_at").toLocalDateTime());
+                }
+            }
+        }
+        return draw;
     }
 }

@@ -98,13 +98,18 @@ public class DrawRepository extends BaseRepository<Draw> {
     }
 
     public Draw update(Draw draw) throws SQLException {
-        String sql = "UPDATE draws SET name = ?, status = ?, created_by = ?::uuid, " +
+        String sql = "UPDATE draws SET name = ?, status = ?, created_by = ?, " +
                 "started_at = ?, finished_at = ? WHERE id = ?";
 
         try (PreparedStatement ps = getConnection().prepareStatement(sql)) {
             ps.setString(1, draw.getName());
             ps.setString(2, draw.getStatus().getValue());
-            ps.setObject(3, draw.getCreatedBy());
+
+            if (draw.getCreatedBy() != null) {
+                ps.setObject(3, draw.getCreatedBy(), java.sql.Types.OTHER);
+            } else {
+                ps.setNull(3, java.sql.Types.OTHER);
+            }
 
             if (draw.getStartedAt() != null) {
                 ps.setTimestamp(4, Timestamp.valueOf(draw.getStartedAt()));

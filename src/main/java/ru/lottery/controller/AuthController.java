@@ -7,12 +7,10 @@ import ru.lottery.dto.request.LoginRequest;
 import ru.lottery.dto.request.RegisterRequest;
 import ru.lottery.dto.response.AuthResponse;
 import ru.lottery.service.AuthService;
+import ru.lottery.util.GsonUtil;
 import ru.lottery.util.ValidationUtils;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
+import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.util.stream.Collectors;
 
@@ -22,7 +20,7 @@ public class AuthController implements HttpHandler {
 
     public AuthController() {
         this.authService = new AuthService();
-        this.gson = new Gson();
+        this.gson = GsonUtil.getGson();
     }
 
     @Override
@@ -55,8 +53,8 @@ public class AuthController implements HttpHandler {
         RegisterRequest request = gson.fromJson(body, RegisterRequest.class);
 
         // Validate request
-        if (!ValidationUtils.isValidLogin(request.getLogin())) {
-            sendResponse(exchange, 400, "{\"error\":\"Invalid login format\"}");
+        if (request.getLogin() == null || !ValidationUtils.isValidLogin(request.getLogin())) {
+            sendResponse(exchange, 400, "{\"error\":\"Invalid login format (3-50 chars, letters, numbers, underscore)\"}");
             return;
         }
 
