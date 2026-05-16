@@ -43,9 +43,6 @@ public class Main {
             server.setExecutor(null);
             server.start();
 
-            server.setExecutor(null);
-            server.start();
-
             logger.info("=== Lottery Backend System Started ===");
             logger.info("HTTP server listening on port: {}", port);
             logger.info("Health check: http://localhost:{}/health", port);

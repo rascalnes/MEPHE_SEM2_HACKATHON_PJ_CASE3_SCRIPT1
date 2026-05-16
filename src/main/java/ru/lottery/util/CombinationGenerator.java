@@ -2,12 +2,28 @@ package ru.lottery.util;
 
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Random;
+import java.util.List;
 
 public class CombinationGenerator {
     private static final int MIN_NUMBER = 1;
     private static final int MAX_NUMBER = 49;
     private static final int NUMBERS_COUNT = 6;
     private static final Random random = new Random();
+    private static final int COUNT = 6;
+
+    public static String generate() {
+        List<Integer> numbers = new ArrayList<>();
+        for (int i = 1; i <= MAX_NUMBER; i++) numbers.add(i);
+        Collections.shuffle(numbers, new Random());
+        return numbers.subList(0, COUNT)
+                .stream()
+                .sorted()
+                .map(String::valueOf)
+                .collect(Collectors.joining(","));
+    }
 
     /**
      * Generate random lottery combination

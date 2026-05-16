@@ -35,7 +35,8 @@ public class DrawResultRepository extends BaseRepository<DrawResult> {
     public DrawResult save(DrawResult result) throws SQLException {
         String sql = "INSERT INTO draw_results (draw_id, winning_combo) VALUES (?, ?) RETURNING id, generated_at";
 
-        try (PreparedStatement ps = getConnection().prepareStatement(sql)) {
+        try (Connection conn = getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setLong(1, result.getDrawId());
             ps.setString(2, result.getWinningCombo());
 
@@ -51,15 +52,31 @@ public class DrawResultRepository extends BaseRepository<DrawResult> {
 
     public Optional<DrawResult> findByDrawId(Long drawId) throws SQLException {
         String sql = "SELECT * FROM draw_results WHERE draw_id = ? ORDER BY generated_at DESC LIMIT 1";
-        return executeQuerySingle(sql, drawId);
+
+        try (Connection conn = getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setLong(1, drawId);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return Optional.of(mapRowToEntity(rs));
+                }
+            }
+        }
+        return Optional.empty();
     }
 
     public boolean existsByDrawId(Long drawId) throws SQLException {
         String sql = "SELECT COUNT(*) FROM draw_results WHERE draw_id = ?";
-        try (PreparedStatement ps = prepareStatement(sql, drawId);
-             ResultSet rs = ps.executeQuery()) {
-            if (rs.next()) {
-                return rs.getInt(1) > 0;
+
+        try (Connection conn = getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setLong(1, drawId);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1) > 0;
+                }
             }
         }
         return false;
