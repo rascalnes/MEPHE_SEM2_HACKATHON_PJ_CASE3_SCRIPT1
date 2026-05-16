@@ -43,9 +43,24 @@ public class Main {
             server.setExecutor(null);
             server.start();
 
+            server.setExecutor(null);
+            server.start();
+
             logger.info("=== Lottery Backend System Started ===");
             logger.info("HTTP server listening on port: {}", port);
-            logger.info("Endpoints: /auth, /tickets, /draws, /health");
+            logger.info("Health check: http://localhost:{}/health", port);
+            logger.info("\n=== Available Endpoints ===");
+            logger.info("\n--- Authentication (Public) ---");
+            logger.info("  POST   /auth/register");
+            logger.info("  POST   /auth/login");
+            logger.info("  POST   /auth/logout");
+            logger.info("\n--- Draws (Authenticated) ---");
+            logger.info("  GET    /draws");
+            logger.info("  GET    /draws/active");
+            logger.info("  GET    /draws/{id}");
+            logger.info("  POST   /draws (ADMIN)");
+            logger.info("  POST   /draws/{id}/start (ADMIN)");
+            logger.info("  POST   /draws/{id}/finish (ADMIN)");
 
             Runtime.getRuntime().addShutdownHook(new Thread(() -> {
                 logger.info("Shutting down...");
