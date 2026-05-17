@@ -49,7 +49,89 @@ Adminer (Database):
     pass: lottery_pass
     db: lottery_db
 
+### 6. Структра базы данных (Модели БД)
 
+Структура БД:
+    1. users
+    id				UUID / BIGSERIAL PRIMARY KEY
+    login				VARCHAR(50) UNIQUE NOT NULL
+    password			VARCHAR(255) NOT NULL
+    role				VARCHAR(20) DEFAULT 'USER'	(ADMIN / USER)
+    created_at			TIMESTAMP    
+
+    2. draws
+        id				BIGSERIAL PRIMARY KEY
+        name				VARCHAR(100) NOT NULL
+        status				VARCHAR(20) NOT NULL	(DRAFT, ACTIVE, FINISHED)
+        created_by			UUID → users(id)
+        created_at			TIMESTAMP
+        started_at			TIMESTAMP (nullable)
+        finished_at			TIMESTAMP (nullable)
+
+    3. draw_results
+        id				BIGSERIAL PRIMARY KEY
+        draw_id				BIGINT → draws(id)
+        winning_combo			VARCHAR(255) NOT NULL
+        generated_at			TIMESTAMP
+    
+    4. tickets
+        id				BIGSERIAL PRIMARY KEY
+        draw_id				BIGINT → draws(id)
+        user_id				UUID → users(id)
+        numbers				VARCHAR(255) NOT NULL
+        status				VARCHAR(20) NOT NULL	(PENDING, WIN, LOSE)
+        checked_at			TIMESTAMP (nullable)
+        purchased_at			TIMESTAMP
+
+### 6. Архитектура приложения
+
+src/main/java/ru/lottery/
+├── controller/
+│   ├── AuthController.java        // Обрабатывает /auth/register, /auth/login, /auth/logout
+│   ├── DrawController.java        // Обрабатывает /draws (CRUD, start, finish)
+│   ├── TicketController.java      // Обрабатывает /tickets (покупка, история, проверка)
+│   └── ResultController.java      // Обрабатывает /draws/{id}/results (просмотр выигрышей)
+├── service/
+│   ├── AuthService.java           // Регистрация, логин, logout, создание сессии
+│   ├── DrawService.java           // Создание, старт, финиш тиражей, генерация результатов
+│   ├── TicketService.java         // Покупка билетов, проверка статуса, история
+│   └── ResultService.java         // Получение выигрышных комбинаций, массовая проверка билетов
+├── repository/
+│   ├── UserRepository.java        // CRUD для users, поиск по login/uuid
+│   ├── DrawRepository.java        // CRUD для draws, поиск по статусу
+│   ├── TicketRepository.java      // CRUD для tickets, поиск по draw_id/user_id
+│   └── DrawResultRepository.java  // CRUD для draw_results, поиск по draw_id
+├── model/
+│   ├── User.java                  // Пользователь (id, login, password, role, created_at)
+│   ├── Draw.java                  // Тираж (id, name, status, created_by, timestamps)
+│   ├── DrawResult.java            // Результат тиража (id, draw_id, winning_combo, generated_at)
+│   ├── Ticket.java                // Билет (id, draw_id, user_id, numbers, status, timestamps)
+│   └── enums/
+│       ├── DrawStatus.java        // DRAFT, ACTIVE, FINISHED + логика переходов
+│       ├── TicketStatus.java      // PENDING, WIN, LOSE
+│       └── UserRole.java          // ADMIN, USER
+├── dto/
+│   ├── request/
+│   │   ├── LoginRequest.java      // {login, password}
+│   │   ├── CreateDrawRequest.java // {name}
+│   │   ├── BuyTicketRequest.java  // {draw_id, numbers} (если numbers не переданы - генерируются)
+│   │   └── RegisterRequest.java   // {login, password}
+│   └── response/
+│       ├── AuthResponse.java      // {success, token, message, user}
+│       ├── DrawResponse.java      // {success, message, draw, winningCombo}
+│       ├── TicketResponse.java    // {success, message, ticket, draw, result}
+│       └── ResultResponse.java    // {draw, winningCombo, tickets: [{number, status}]}
+├── security/
+│   ├── AuthenticationFilter.java  // Проверяет Bearer-токен, добавляет userId/userRole в атрибуты
+│   ├── PasswordEncoder.java       // PBKDF2 хеширование паролей (соль + итерации)
+│   └── SessionManager.java        // In-memory хранение токенов (userId, role, expires)
+├── util/
+│   ├── CombinationGenerator.java  // Генерация 6 случайных чисел из 1-49, валидация комбинаций
+│   ├── TicketChecker.java         // Сравнение билета с выигрышной комбинацией, обновление статусов
+│   └── ValidationUtils.java       // Валидация логина, пароля, имени тиража, комбинации билета
+└── config/
+├── DatabaseConnection.java    // HikariCP пул соединений, getConnection(), closePool()
+└── AppConfig.java             // Загрузка .env, настройки БД, порта, пула соединений
 
 ## ОПИСАНИЕ И ПРИМЕРЫ
 
