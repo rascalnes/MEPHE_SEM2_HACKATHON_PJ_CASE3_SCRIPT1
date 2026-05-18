@@ -3,23 +3,34 @@ package ru.lottery.controller;
 import com.google.gson.Gson;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
+import ru.lottery.dto.request.BuyTicketRequest;
 import ru.lottery.dto.request.CreateDrawRequest;
 import ru.lottery.dto.response.DrawResponse;
+import ru.lottery.dto.response.TicketResponse;
+import ru.lottery.model.DrawResult;
 import ru.lottery.service.DrawService;
+import ru.lottery.service.ResultService;
+import ru.lottery.service.TicketService;
 import ru.lottery.util.GsonUtil;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
+import java.sql.SQLException;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
 public class DrawController implements HttpHandler {
     private final DrawService drawService;
+    private final TicketService ticketService;
+    private final ResultService resultService;
     private final Gson gson;
 
     public DrawController() {
         this.drawService = new DrawService();
+        this.ticketService = new TicketService();
+        this.resultService = new ResultService();
         this.gson = GsonUtil.getGson();
     }
 
@@ -28,9 +39,13 @@ public class DrawController implements HttpHandler {
         String method = exchange.getRequestMethod();
         String path = exchange.getRequestURI().getPath();
 
-        // Get authenticated user info from filter
         UUID userId = (UUID) exchange.getAttribute("userId");
         String userRole = (String) exchange.getAttribute("userRole");
+
+        if (userId == null) {
+            sendResponse(exchange, 401, "{\"error\":\"Не авторизован\"}");
+            return;
+        }
 
         try {
             if ("GET".equals(method)) {
@@ -45,12 +60,18 @@ public class DrawController implements HttpHandler {
                     } else {
                         sendResponse(exchange, 400, "{\"error\":\"Invalid draw ID\"}");
                     }
+                } else if (path.matches("/draws/\\d+/results")) {
+                    Long drawId = extractDrawId(path);
+                    if (drawId != null) {
+                        handleGetDrawResult(exchange, drawId);
+                    } else {
+                        sendResponse(exchange, 400, "{\"error\":\"Invalid draw ID\"}");
+                    }
                 } else {
                     sendResponse(exchange, 404, "{\"error\":\"Not found\"}");
                 }
             } else if ("POST".equals(method)) {
                 if (path.equals("/draws")) {
-                    // Only ADMIN can create draws
                     if (!"ADMIN".equals(userRole)) {
                         sendResponse(exchange, 403, "{\"error\":\"Admin access required\"}");
                         return;
@@ -74,7 +95,14 @@ public class DrawController implements HttpHandler {
                     }
                     Long drawId = extractDrawId(path);
                     if (drawId != null) {
-                        handleFinishDraw(exchange, drawId, userId);
+                        handleFinishDraw(exchange, drawId);
+                    } else {
+                        sendResponse(exchange, 400, "{\"error\":\"Invalid draw ID\"}");
+                    }
+                } else if (path.matches("/draws/\\d+/tickets")) {
+                    Long drawId = extractDrawId(path);
+                    if (drawId != null) {
+                        handlePurchaseTicket(exchange, drawId, userId);
                     } else {
                         sendResponse(exchange, 400, "{\"error\":\"Invalid draw ID\"}");
                     }
@@ -90,50 +118,85 @@ public class DrawController implements HttpHandler {
         }
     }
 
+    // ========== Блок 2 методы ==========
     private void handleCreateDraw(HttpExchange exchange, UUID adminId) throws IOException {
         String body = readRequestBody(exchange);
         CreateDrawRequest request = gson.fromJson(body, CreateDrawRequest.class);
-
         if (request.getName() == null || request.getName().trim().isEmpty()) {
             sendResponse(exchange, 400, "{\"error\":\"Draw name is required\"}");
             return;
         }
-
         DrawResponse response = drawService.createDraw(request.getName(), adminId);
-        int statusCode = response.isSuccess() ? 201 : 400;
-        sendResponse(exchange, statusCode, gson.toJson(response));
+        int code = response.isSuccess() ? 201 : 400;
+        sendResponse(exchange, code, gson.toJson(response));
     }
 
     private void handleStartDraw(HttpExchange exchange, Long drawId, UUID adminId) throws IOException {
         DrawResponse response = drawService.startDraw(drawId, adminId);
-        int statusCode = response.isSuccess() ? 200 : 400;
-        sendResponse(exchange, statusCode, gson.toJson(response));
-    }
-
-    private void handleFinishDraw(HttpExchange exchange, Long drawId, UUID adminId) throws IOException {
-        DrawResponse response = drawService.finishDraw(drawId, adminId);
-        int statusCode = response.isSuccess() ? 200 : 400;
-        sendResponse(exchange, statusCode, gson.toJson(response));
+        int code = response.isSuccess() ? 200 : 400;
+        sendResponse(exchange, code, gson.toJson(response));
     }
 
     private void handleGetActiveDraws(HttpExchange exchange) throws IOException {
         List<DrawResponse> draws = drawService.getActiveDraws();
-        String response = gson.toJson(draws);
-        sendResponse(exchange, 200, response);
+        sendResponse(exchange, 200, gson.toJson(draws));
     }
 
     private void handleGetAllDraws(HttpExchange exchange) throws IOException {
         List<DrawResponse> draws = drawService.getAllDraws();
-        String response = gson.toJson(draws);
-        sendResponse(exchange, 200, response);
+        sendResponse(exchange, 200, gson.toJson(draws));
     }
 
     private void handleGetDrawById(HttpExchange exchange, Long drawId) throws IOException {
         DrawResponse response = drawService.getDrawById(drawId);
-        int statusCode = response.isSuccess() ? 200 : 404;
-        sendResponse(exchange, statusCode, gson.toJson(response));
+        int code = response.isSuccess() ? 200 : 404;
+        sendResponse(exchange, code, gson.toJson(response));
     }
 
+    // ========== Блок 4: Завершение тиража (генерация выигрышной комбинации) ==========
+    private void handleFinishDraw(HttpExchange exchange, Long drawId) throws IOException {
+        try {
+            DrawResult result = resultService.finishDraw(drawId);
+            sendResponse(exchange, 200, gson.toJson(result));
+        } catch (IllegalArgumentException e) {
+            sendResponse(exchange, 400, "{\"error\":\"" + e.getMessage() + "\"}");
+        } catch (SQLException e) {
+            sendResponse(exchange, 500, "{\"error\":\"Database error: " + e.getMessage() + "\"}");
+        }
+    }
+
+    // ========== Блок 4: Результаты тиража ==========
+    private void handleGetDrawResult(HttpExchange exchange, Long drawId) throws IOException {
+        try {
+            Optional<DrawResult> opt = resultService.getDrawResult(drawId);
+            if (opt.isPresent()) {
+                sendResponse(exchange, 200, gson.toJson(opt.get()));
+            } else {
+                sendResponse(exchange, 404, "{\"error\":\"Результаты не найдены\"}");
+            }
+        } catch (SQLException e) {
+            sendResponse(exchange, 500, "{\"error\":\"Database error\"}");
+        }
+    }
+
+    // ========== Блок 3: Покупка билета ==========
+    private void handlePurchaseTicket(HttpExchange exchange, Long drawId, UUID userId) throws IOException {
+        String body = readRequestBody(exchange);
+        BuyTicketRequest request = gson.fromJson(body, BuyTicketRequest.class);
+        if (request == null) {
+            request = new BuyTicketRequest();
+        }
+        try {
+            TicketResponse response = ticketService.purchaseTicket(drawId, userId, request);
+            sendResponse(exchange, 201, gson.toJson(response));
+        } catch (IllegalArgumentException e) {
+            sendResponse(exchange, 400, "{\"error\":\"" + e.getMessage() + "\"}");
+        } catch (SQLException e) {
+            sendResponse(exchange, 500, "{\"error\":\"Database error: " + e.getMessage() + "\"}");
+        }
+    }
+
+    // ========== Вспомогательные методы ==========
     private Long extractDrawId(String path) {
         String[] parts = path.split("/");
         for (String part : parts) {
