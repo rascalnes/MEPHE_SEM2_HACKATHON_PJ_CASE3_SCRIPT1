@@ -51,7 +51,6 @@ Adminer (Database):
 
 ### 6. Структра базы данных (Модели БД)
 ```
-Структура БД:
     1. users
     id				UUID / BIGSERIAL PRIMARY KEY
     login				VARCHAR(50) UNIQUE NOT NULL
