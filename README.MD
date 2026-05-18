@@ -52,11 +52,11 @@ Adminer (Database):
 ### 6. Структра базы данных (Модели БД)
 ```
     1. users
-    id				UUID / BIGSERIAL PRIMARY KEY
-    login				VARCHAR(50) UNIQUE NOT NULL
-    password			VARCHAR(255) NOT NULL
-    role				VARCHAR(20) DEFAULT 'USER'	(ADMIN / USER)
-    created_at			TIMESTAMP    
+        id				UUID / BIGSERIAL PRIMARY KEY
+        login				VARCHAR(50) UNIQUE NOT NULL
+        password			VARCHAR(255) NOT NULL
+        role				VARCHAR(20) DEFAULT 'USER'	(ADMIN / USER)
+        created_at			TIMESTAMP    
 
     2. draws
         id				BIGSERIAL PRIMARY KEY
