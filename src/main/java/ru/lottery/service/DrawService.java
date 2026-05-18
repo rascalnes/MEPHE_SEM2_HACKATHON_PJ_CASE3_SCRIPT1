@@ -26,108 +26,73 @@ public class DrawService {
         this.drawResultRepository = new DrawResultRepository();
     }
 
-    /**
-     * Create new draw (DRAFT status)
-     */
     public DrawResponse createDraw(String name, UUID adminId) {
         try {
             if (name == null || name.trim().isEmpty()) {
-                return DrawResponse.error("Draw name cannot be empty");
+                return DrawResponse.error("Название тиража не может быть пустым");
             }
-
             if (name.length() > 100) {
-                return DrawResponse.error("Draw name too long (max 100 characters)");
+                return DrawResponse.error("Название тиража слишком длинное (максимум 100 символов)");
             }
-
             Draw draw = new Draw(name.trim(), adminId);
             draw = drawRepository.save(draw);
-
-            logger.info("Draw created: {} (ID: {}) by admin: {}", name, draw.getId(), adminId);
-            return DrawResponse.success(draw, "Draw created successfully");
-
+            logger.info("Тираж создан: {} (ID: {}) администратором: {}", name, draw.getId(), adminId);
+            return DrawResponse.success(draw, "Тираж успешно создан");
         } catch (SQLException e) {
-            logger.error("Failed to create draw", e);
-            return DrawResponse.error("Database error: " + e.getMessage());
+            logger.error("Ошибка создания тиража", e);
+            return DrawResponse.error("Ошибка базы данных: " + e.getMessage());
         }
     }
 
-    /**
-     * Start draw (DRAFT -> ACTIVE)
-     */
     public DrawResponse startDraw(Long drawId, UUID adminId) {
         try {
             Draw draw = drawRepository.findById(drawId).orElse(null);
-
             if (draw == null) {
-                return DrawResponse.error("Draw not found");
+                return DrawResponse.error("Тираж не найден");
             }
-
             if (draw.getStatus() != DrawStatus.DRAFT) {
-                return DrawResponse.error("Only DRAFT draws can be started");
+                return DrawResponse.error("Запустить можно только тираж в статусе DRAFT");
             }
-
             if (!draw.getStatus().canTransitionTo(DrawStatus.ACTIVE)) {
-                return DrawResponse.error("Cannot start draw from current status: " + draw.getStatus().getValue());
+                return DrawResponse.error("Невозможно запустить тираж из текущего статуса: " + draw.getStatus().getValue());
             }
-
             draw.setStatus(DrawStatus.ACTIVE);
             draw.setStartedAt(LocalDateTime.now());
             drawRepository.update(draw);
-
-            logger.info("Draw started: {} (ID: {}) by admin: {}", draw.getName(), drawId, adminId);
-            return DrawResponse.success(draw, "Draw started successfully");
-
+            logger.info("Тираж запущен: {} (ID: {}) администратором: {}", draw.getName(), drawId, adminId);
+            return DrawResponse.success(draw, "Тираж успешно запущен");
         } catch (SQLException e) {
-            logger.error("Failed to start draw", e);
-            return DrawResponse.error("Database error: " + e.getMessage());
+            logger.error("Ошибка запуска тиража", e);
+            return DrawResponse.error("Ошибка базы данных: " + e.getMessage());
         }
     }
 
-    /**
-     * Finish draw (ACTIVE -> FINISHED) and generate results
-     */
     public DrawResponse finishDraw(Long drawId, UUID adminId) {
         try {
             Draw draw = drawRepository.findById(drawId).orElse(null);
-
             if (draw == null) {
-                return DrawResponse.error("Draw not found");
+                return DrawResponse.error("Тираж не найден");
             }
-
             if (draw.getStatus() != DrawStatus.ACTIVE) {
-                return DrawResponse.error("Only ACTIVE draws can be finished");
+                return DrawResponse.error("Завершить можно только активный тираж");
             }
-
             if (!draw.getStatus().canTransitionTo(DrawStatus.FINISHED)) {
-                return DrawResponse.error("Cannot finish draw from current status: " + draw.getStatus().getValue());
+                return DrawResponse.error("Невозможно завершить тираж из текущего статуса: " + draw.getStatus().getValue());
             }
-
-            // Generate winning combination
             String winningCombo = CombinationGenerator.generateRandomCombination();
-
-            // Save draw result
             DrawResult result = new DrawResult(drawId, winningCombo);
             drawResultRepository.save(result);
-
-            // Update draw status
             draw.setStatus(DrawStatus.FINISHED);
             draw.setFinishedAt(LocalDateTime.now());
             drawRepository.update(draw);
-
-            logger.info("Draw finished: {} (ID: {}) by admin: {}. Winning combo: {}",
-                    draw.getName(), drawId, adminId, winningCombo);
-
-            return DrawResponse.successWithResult(draw, result, "Draw finished successfully");
-
+            logger.info("Тираж завершён: {} (ID: {}), выигрышная комбинация: {}", draw.getName(), drawId, winningCombo);
+            return DrawResponse.successWithResult(draw, result, "Тираж успешно завершён");
         } catch (SQLException e) {
-            logger.error("Failed to finish draw", e);
-            return DrawResponse.error("Database error: " + e.getMessage());
+            logger.error("Ошибка завершения тиража", e);
+            return DrawResponse.error("Ошибка базы данных: " + e.getMessage());
         }
     }
 
-    /**
-     * Get all active draws
-     */
     public List<DrawResponse> getActiveDraws() {
         try {
             List<Draw> draws = drawRepository.findActiveDraws();
@@ -135,39 +100,29 @@ public class DrawService {
                     .map(draw -> DrawResponse.success(draw, null))
                     .collect(Collectors.toList());
         } catch (SQLException e) {
-            logger.error("Failed to get active draws", e);
+            logger.error("Ошибка получения активных тиражей", e);
             return List.of();
         }
     }
 
-    /**
-     * Get draw by ID
-     */
     public DrawResponse getDrawById(Long drawId) {
         try {
             Draw draw = drawRepository.findById(drawId).orElse(null);
-
             if (draw == null) {
-                return DrawResponse.error("Draw not found");
+                return DrawResponse.error("Тираж не найден");
             }
-
             DrawResult result = drawResultRepository.findByDrawId(drawId).orElse(null);
-
             if (result != null) {
                 return DrawResponse.successWithResult(draw, result, null);
             } else {
                 return DrawResponse.success(draw, null);
             }
-
         } catch (SQLException e) {
-            logger.error("Failed to get draw", e);
-            return DrawResponse.error("Database error: " + e.getMessage());
+            logger.error("Ошибка получения тиража", e);
+            return DrawResponse.error("Ошибка базы данных: " + e.getMessage());
         }
     }
 
-    /**
-     * Get all draws
-     */
     public List<DrawResponse> getAllDraws() {
         try {
             List<Draw> draws = drawRepository.findAll();
@@ -175,33 +130,27 @@ public class DrawService {
                     .map(draw -> DrawResponse.success(draw, null))
                     .collect(Collectors.toList());
         } catch (SQLException e) {
-            logger.error("Failed to get all draws", e);
+            logger.error("Ошибка получения всех тиражей", e);
             return List.of();
         }
     }
 
-    /**
-     * Check if draw exists and is active
-     */
     public boolean isDrawActive(Long drawId) {
         try {
             Draw draw = drawRepository.findById(drawId).orElse(null);
             return draw != null && draw.isActive();
         } catch (SQLException e) {
-            logger.error("Failed to check draw status", e);
+            logger.error("Ошибка проверки статуса тиража", e);
             return false;
         }
     }
 
-    /**
-     * Get winning combination for finished draw
-     */
     public String getWinningCombination(Long drawId) {
         try {
             DrawResult result = drawResultRepository.findByDrawId(drawId).orElse(null);
             return result != null ? result.getWinningCombo() : null;
         } catch (SQLException e) {
-            logger.error("Failed to get winning combination", e);
+            logger.error("Ошибка получения выигрышной комбинации", e);
             return null;
         }
     }

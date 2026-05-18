@@ -54,9 +54,20 @@ public class AuthenticationFilter extends Filter {
     }
 
     private boolean requiresAdmin(String path) {
-        return path.startsWith("/draws") &&
-                (path.contains("/start") || path.contains("/finish") ||
-                        path.contains("/generate-result") || path.equals("/draws"));
+        // GET-запросы к /draws и /draws/active доступны всем авторизованным
+        if (path.equals("/draws") || path.equals("/draws/active")) {
+            return false;
+        }
+        // POST /draws (создание) – только ADMIN
+        if (path.equals("/draws")) {
+            return true;
+        }
+        // /draws/{id}/start и /draws/{id}/finish – только ADMIN
+        if (path.matches("/draws/\\d+/start") || path.matches("/draws/\\d+/finish")) {
+            return true;
+        }
+        // Остальные /draws/... (например, /draws/{id}/tickets, /draws/{id}/results) доступны всем
+        return false;
     }
 
     private String extractToken(String authHeader) {
