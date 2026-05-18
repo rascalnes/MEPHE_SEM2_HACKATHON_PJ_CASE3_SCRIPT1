@@ -50,7 +50,7 @@ Adminer (Database):
     db: lottery_db
 
 ### 6. Структра базы данных (Модели БД)
-
+```
 Структура БД:
     1. users
     id				UUID / BIGSERIAL PRIMARY KEY
@@ -82,6 +82,7 @@ Adminer (Database):
         status				VARCHAR(20) NOT NULL	(PENDING, WIN, LOSE)
         checked_at			TIMESTAMP (nullable)
         purchased_at			TIMESTAMP
+```
 
 ### 6. Архитектура приложения
 ```
