@@ -81,7 +81,17 @@ Adminer (Database):
         status				VARCHAR(20) NOT NULL	(PENDING, WIN, LOSE)
         checked_at			TIMESTAMP (nullable)
         purchased_at			TIMESTAMP
+        
+    Статусы розыгрыша (Draw):
+        DRAFT — только создан
+        ACTIVE — можно покупать билеты
+        FINISHED — розыгрыш завершён, билеты проверены
+
+    Статусы билета (Ticket):
+        PENDING — куплен, но тираж ещё не завершён
+        WIN / LOSE — результат после проверки
 ```
+![img.png](img.png)
 
 ### 6. Архитектура приложения
 ```
