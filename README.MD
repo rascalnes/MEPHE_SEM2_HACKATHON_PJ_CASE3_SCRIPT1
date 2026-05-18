@@ -84,7 +84,7 @@ Adminer (Database):
         purchased_at			TIMESTAMP
 
 ### 6. Архитектура приложения
-"
+```
 src/main/java/ru/lottery/
 ├── controller/
 │   ├── AuthController.java        // Обрабатывает /auth/register, /auth/login, /auth/logout
@@ -132,7 +132,7 @@ src/main/java/ru/lottery/
 └── config/
 ├── DatabaseConnection.java    // HikariCP пул соединений, getConnection(), closePool()
 └── AppConfig.java             // Загрузка .env, настройки БД, порта, пула соединений
-"
+```
 
 ## ОПИСАНИЕ И ПРИМЕРЫ
 
